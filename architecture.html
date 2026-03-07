@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindBridge — System Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,wght@0,300;0,600;0,900;1,300;1,600&display=swap');
+
+  :root {
+    --bg: #0a0e14;
+    --surface: #111620;
+    --surface2: #161d2a;
+    --border: #1e2d42;
+    --accent-teal: #00d4aa;
+    --accent-blue: #4a9eff;
+    --accent-purple: #9b6dff;
+    --accent-amber: #ffb347;
+    --accent-rose: #ff6b8a;
+    --text: #e8edf5;
+    --text-dim: #6b7f99;
+    --text-mid: #a0b0c8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 32px;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 64px;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .tag {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent-teal);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tag::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--accent-teal);
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(42px, 6vw, 72px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  h1 .accent { color: var(--accent-teal); font-style: italic; }
+
+  .subtitle {
+    color: var(--text-mid);
+    font-size: 13px;
+    max-width: 480px;
+    line-height: 1.8;
+  }
+
+  /* Section titles */
+  .section-title {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Architecture Flow */
+  .arch-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 56px;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .flow-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .flow-row.single {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-row.single .flow-node {
+    max-width: 440px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .flow-node {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    position: relative;
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .flow-node:hover {
+    border-color: var(--accent-teal);
+    background: var(--surface2);
+    transform: translateY(-1px);
+  }
+
+  .flow-node .node-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .flow-node .node-name {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .flow-node .node-desc {
+    font-size: 11px;
+    color: var(--text-mid);
+    line-height: 1.6;
+  }
+
+  .flow-node .node-tech {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .chip {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+    text-transform: uppercase;
+  }
+
+  .chip.teal { color: var(--accent-teal); border-color: rgba(0,212,170,0.3); background: rgba(0,212,170,0.06); }
+  .chip.blue { color: var(--accent-blue); border-color: rgba(74,158,255,0.3); background: rgba(74,158,255,0.06); }
+  .chip.purple { color: var(--accent-purple); border-color: rgba(155,109,255,0.3); background: rgba(155,109,255,0.06); }
+  .chip.amber { color: var(--accent-amber); border-color: rgba(255,179,71,0.3); background: rgba(255,179,71,0.06); }
+  .chip.rose { color: var(--accent-rose); border-color: rgba(255,107,138,0.3); background: rgba(255,107,138,0.06); }
+
+  .flow-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: var(--text-dim);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .flow-arrow svg { color: var(--accent-teal); opacity: 0.6; }
+
+  .connector-vertical {
+    display: flex;
+    justify-content: center;
+    padding: 6px 0;
+  }
+
+  .connector-vertical::before {
+    content: '';
+    width: 1px;
+    height: 28px;
+    background: linear-gradient(to bottom, var(--accent-teal), transparent);
+    opacity: 0.4;
+  }
+
+  /* Two-column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 56px;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Folder tree */
+  .folder-tree {
+    animation: fadeUp 0.8s 0.4s ease both;
+    margin-bottom: 56px;
+  }
+
+  .tree-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .tree-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .tree-panel-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-mid);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tree-body {
+    padding: 16px 20px;
+    font-size: 12px;
+    line-height: 2.2;
+    color: var(--text-mid);
+  }
+
+  .tree-body .dir {
+    color: var(--accent-blue);
+    font-weight: 500;
+  }
+
+  .tree-body .file {
+    color: var(--text-mid);
+  }
+
+  .tree-body .comment {
+    color: var(--text-dim);
+    font-size: 10px;
+    font-style: italic;
+  }
+
+  .tree-body .indent1 { padding-left: 16px; }
+  .tree-body .indent2 { padding-left: 32px; }
+  .tree-body .indent3 { padding-left: 48px; }
+
+  /* Feature list */
+  .features {
+    animation: fadeUp 0.8s 0.5s ease both;
+    margin-bottom: 56px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .feat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    transition: all 0.2s;
+  }
+
+  .feat-card:hover {
+    border-color: var(--border);
+    background: var(--surface2);
+  }
+
+  .feat-icon {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+
+  .feat-title {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .feat-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  /* Data model */
+  .data-model {
+    animation: fadeUp 0.8s 0.6s ease both;
+    margin-bottom: 56px;
+  }
+
+  .schema-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .schema-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .schema-header {
+    background: var(--surface2);
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .schema-body {
+    padding: 12px 16px;
+    font-size: 11px;
+    line-height: 2;
+    color: var(--text-mid);
+  }
+
+  .schema-field {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .field-name { color: var(--text); }
+  .field-type { color: var(--text-dim); font-size: 10px; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .two-col, .tree-grid, .features-grid, .schema-grid { grid-template-columns: 1fr; }
+    .flow-row { grid-template-columns: 1fr; }
+    .flow-arrow { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="tag">System Architecture</div>
+    <h1>Mind<span class="accent">Bridge</span></h1>
+    <p class="subtitle">A therapist-patient journaling platform that bridges the gap between sessions using AI-powered emotional analysis.</p>
+  </div>
+
+  <!-- Architecture Flow -->
+  <div class="arch-flow">
+    <div class="section-title">// System Flow</div>
+
+    <!-- Layer 1: Clients -->
+    <div class="flow-row">
+      <div class="flow-node">
+        <div class="node-label">Client — Patient</div>
+        <div class="node-name">Patient App</div>
+        <div class="node-desc">Journals thoughts, views AI insights, sets reminders</div>
+        <div class="node-tech">
+          <span class="chip teal">Flutter</span>
+          <span class="chip teal">Android / iOS</span>
+        </div>
+      </div>
+      <div class="flow-arrow">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h8M12 8l4 4-4 4"/></svg>
+        <span>REST</span>
+      </div>
+      <div class="flow-node">
+        <div class="node-label">Client — Therapist</div>
+        <div class="node-name">Therapist Dashboard</div>
+        <div class="node-desc">Reviews patient entries, mood trends, AI summaries</div>
+        <div class="node-tech">
+          <span class="chip blue">Flutter Web</span>
+          <span class="chip blue">or React</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector-vertical"></div>
+
+    <!-- Layer 2: Auth -->
+    <div class="flow-row single">
+      <div class="flow-node">
+        <div class="node-label">Layer 2 — Identity</div>
+        <div class="node-name">Firebase Authentication</div>
+        <div class="node-desc">Separate roles for patients and therapists. Therapist must verify patient link before accessing data.</div>
+        <div class="node-tech">
+          <span class="chip amber">Role-based access</span>
+          <span class="chip amber">JWT tokens</span>
+          <span class="chip amber">Email / Google OAuth</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector-vertical"></div>
+
+    <!-- Layer 3: Backend -->
+    <div class="flow-row">
+      <div class="flow-node">
+        <div class="node-label">Layer 3a — Storage</div>
+        <div class="node-name">Firestore Database</div>
+        <div class="node-desc">Stores journal entries, user profiles, therapist-patient links, AI analysis results</div>
+        <div class="node-tech">
+          <span class="chip teal">NoSQL</span>
+          <span class="chip teal">Real-time sync</span>
+          <span class="chip teal">Offline support</span>
+        </div>
+      </div>
+      <div class="flow-arrow">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h8"/></svg>
+        <span>Trigger</span>
+      </div>
+      <div class="flow-node">
+        <div class="node-label">Layer 3b — Logic</div>
+        <div class="node-name">Cloud Functions</div>
+        <div class="node-desc">Triggered on new journal entry. Calls AI API, stores analysis, sends notifications</div>
+        <div class="node-tech">
+          <span class="chip purple">Node.js</span>
+          <span class="chip purple">Auto-scaled</span>
+          <span class="chip purple">Event-driven</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector-vertical"></div>
+
+    <!-- Layer 4: AI -->
+    <div class="flow-row single">
+      <div class="flow-node">
+        <div class="node-label">Layer 4 — Intelligence</div>
+        <div class="node-name">AI Analysis Engine</div>
+        <div class="node-desc">Detects mood, stress, emotions, patterns. Generates therapist-ready summaries and patient insights. Weekly/monthly reports auto-generated.</div>
+        <div class="node-tech">
+          <span class="chip rose">Claude API</span>
+          <span class="chip rose">or Gemini API</span>
+          <span class="chip rose">Structured prompts</span>
+          <span class="chip rose">JSON output</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector-vertical"></div>
+
+    <!-- Layer 5: Notifications -->
+    <div class="flow-row single">
+      <div class="flow-node">
+        <div class="node-label">Layer 5 — Engagement</div>
+        <div class="node-name">Firebase Cloud Messaging</div>
+        <div class="node-desc">Daily reminders to patients. Alert therapist if AI detects high distress signals.</div>
+        <div class="node-tech">
+          <span class="chip amber">Push notifications</span>
+          <span class="chip amber">Crisis alerts</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Folder Structure -->
+  <div class="folder-tree">
+    <div class="section-title">// Folder Structure</div>
+    <div class="tree-grid">
+
+      <div class="tree-panel">
+        <div class="tree-panel-header">
+          <span style="color:var(--accent-teal)">◆</span> Flutter App (lib/)
+        </div>
+        <div class="tree-body">
+          <div class="dir">lib/</div>
+          <div class="indent1 dir">core/</div>
+          <div class="indent2 file">constants.dart</div>
+          <div class="indent2 file">theme.dart</div>
+          <div class="indent2 file">router.dart</div>
+          <div class="indent1 dir">models/</div>
+          <div class="indent2 file">user_model.dart</div>
+          <div class="indent2 file">journal_entry.dart</div>
+          <div class="indent2 file">ai_analysis.dart</div>
+          <div class="indent2 file">therapist_link.dart</div>
+          <div class="indent1 dir">services/</div>
+          <div class="indent2 file">auth_service.dart</div>
+          <div class="indent2 file">firestore_service.dart</div>
+          <div class="indent2 file">notification_service.dart</div>
+          <div class="indent2 file">offline_service.dart</div>
+          <div class="indent1 dir">providers/</div>
+          <div class="indent2 file comment">// Riverpod or Provider</div>
+          <div class="indent2 file">auth_provider.dart</div>
+          <div class="indent2 file">journal_provider.dart</div>
+          <div class="indent2 file">insights_provider.dart</div>
+          <div class="indent1 dir">screens/</div>
+          <div class="indent2 dir">patient/</div>
+          <div class="indent3 file">home_screen.dart</div>
+          <div class="indent3 file">add_entry_screen.dart</div>
+          <div class="indent3 file">insights_screen.dart</div>
+          <div class="indent3 file">timeline_screen.dart</div>
+          <div class="indent2 dir">therapist/</div>
+          <div class="indent3 file">dashboard_screen.dart</div>
+          <div class="indent3 file">patient_detail.dart</div>
+          <div class="indent3 file">session_prep.dart</div>
+          <div class="indent2 dir">shared/</div>
+          <div class="indent3 file">login_screen.dart</div>
+          <div class="indent3 file">settings_screen.dart</div>
+          <div class="indent1 dir">widgets/</div>
+          <div class="indent2 file">mood_chart.dart</div>
+          <div class="indent2 file">entry_card.dart</div>
+          <div class="indent2 file">ai_insight_card.dart</div>
+          <div class="indent2 file">emotion_badge.dart</div>
+          <div class="indent1 file">main.dart</div>
+        </div>
+      </div>
+
+      <div class="tree-panel">
+        <div class="tree-panel-header">
+          <span style="color:var(--accent-purple)">◆</span> Cloud Functions (functions/)
+        </div>
+        <div class="tree-body">
+          <div class="dir">functions/</div>
+          <div class="indent1 dir">src/</div>
+          <div class="indent2 dir">triggers/</div>
+          <div class="indent3 file">onEntryCreated.js</div>
+          <div class="indent3 file comment">// fires on new journal entry</div>
+          <div class="indent3 file">onWeeklyReport.js</div>
+          <div class="indent3 file comment">// cron: every Sunday</div>
+          <div class="indent3 file">onCrisisDetected.js</div>
+          <div class="indent3 file comment">// alert therapist</div>
+          <div class="indent2 dir">ai/</div>
+          <div class="indent3 file">analyzeEntry.js</div>
+          <div class="indent3 file comment">// calls Claude/Gemini API</div>
+          <div class="indent3 file">buildPrompt.js</div>
+          <div class="indent3 file comment">// prompt engineering</div>
+          <div class="indent3 file">parseResponse.js</div>
+          <div class="indent3 file comment">// parse structured JSON</div>
+          <div class="indent2 dir">notifications/</div>
+          <div class="indent3 file">sendReminder.js</div>
+          <div class="indent3 file">sendAlert.js</div>
+          <div class="indent2 dir">reports/</div>
+          <div class="indent3 file">generateWeekly.js</div>
+          <div class="indent3 file">generateMonthly.js</div>
+          <div class="indent2 dir">utils/</div>
+          <div class="indent3 file">firestore.js</div>
+          <div class="indent3 file">validators.js</div>
+          <div class="indent1 file">index.js</div>
+          <div class="indent1 file comment">// exports all functions</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Firestore Schema -->
+  <div class="data-model">
+    <div class="section-title">// Firestore Data Schema</div>
+    <div class="schema-grid">
+
+      <div class="schema-card">
+        <div class="schema-header"><span style="color:var(--accent-teal)">●</span> users/{userId}</div>
+        <div class="schema-body">
+          <div class="schema-field"><span class="field-name">uid</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">email</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">role</span><span class="field-type">"patient" | "therapist"</span></div>
+          <div class="schema-field"><span class="field-name">displayName</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">therapistId</span><span class="field-type">string? (patient only)</span></div>
+          <div class="schema-field"><span class="field-name">reminderTime</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">createdAt</span><span class="field-type">timestamp</span></div>
+        </div>
+      </div>
+
+      <div class="schema-card">
+        <div class="schema-header"><span style="color:var(--accent-blue)">●</span> entries/{entryId}</div>
+        <div class="schema-body">
+          <div class="schema-field"><span class="field-name">userId</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">content</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">createdAt</span><span class="field-type">timestamp</span></div>
+          <div class="schema-field"><span class="field-name">isAnalyzed</span><span class="field-type">boolean</span></div>
+          <div class="schema-field"><span class="field-name">mood</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">stressLevel</span><span class="field-type">"low"|"med"|"high"</span></div>
+          <div class="schema-field"><span class="field-name">emotions</span><span class="field-type">string[]</span></div>
+          <div class="schema-field"><span class="field-name">aiInsight</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">aiSuggestion</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">flagged</span><span class="field-type">boolean (crisis)</span></div>
+        </div>
+      </div>
+
+      <div class="schema-card">
+        <div class="schema-header"><span style="color:var(--accent-purple)">●</span> links/{linkId}</div>
+        <div class="schema-body">
+          <div class="schema-field"><span class="field-name">therapistId</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">patientId</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">status</span><span class="field-type">"pending"|"active"</span></div>
+          <div class="schema-field"><span class="field-name">linkedAt</span><span class="field-type">timestamp</span></div>
+          <div class="schema-field"><span class="field-name">inviteCode</span><span class="field-type">string</span></div>
+        </div>
+      </div>
+
+      <div class="schema-card">
+        <div class="schema-header"><span style="color:var(--accent-amber)">●</span> reports/{reportId}</div>
+        <div class="schema-body">
+          <div class="schema-field"><span class="field-name">userId</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">type</span><span class="field-type">"weekly" | "monthly"</span></div>
+          <div class="schema-field"><span class="field-name">period</span><span class="field-type">string (e.g. "2026-W10")</span></div>
+          <div class="schema-field"><span class="field-name">dominantMood</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">avgStress</span><span class="field-type">number</span></div>
+          <div class="schema-field"><span class="field-name">topTopics</span><span class="field-type">string[]</span></div>
+          <div class="schema-field"><span class="field-name">summary</span><span class="field-type">string (AI generated)</span></div>
+          <div class="schema-field"><span class="field-name">createdAt</span><span class="field-type">timestamp</span></div>
+        </div>
+      </div>
+
+      <div class="schema-card">
+        <div class="schema-header"><span style="color:var(--accent-rose)">●</span> sessions/{sessionId}</div>
+        <div class="schema-body">
+          <div class="schema-field"><span class="field-name">therapistId</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">patientId</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">scheduledAt</span><span class="field-type">timestamp</span></div>
+          <div class="schema-field"><span class="field-name">prepNotes</span><span class="field-type">string (AI brief)</span></div>
+          <div class="schema-field"><span class="field-name">therapistNotes</span><span class="field-type">string</span></div>
+          <div class="schema-field"><span class="field-name">status</span><span class="field-type">"upcoming"|"done"</span></div>
+        </div>
+      </div>
+
+      <div class="schema-card">
+        <div class="schema-header"><span style="color:var(--accent-teal)">●</span> Firestore Rules</div>
+        <div class="schema-body" style="font-size:10px; line-height:1.8;">
+          <div style="color:var(--accent-teal)">entries:</div>
+          <div style="color:var(--text-dim)">patient reads/writes own only</div>
+          <div style="color:var(--text-dim)">therapist reads linked patients only</div>
+          <div style="margin-top:8px;color:var(--accent-blue)">users:</div>
+          <div style="color:var(--text-dim)">read own profile only</div>
+          <div style="margin-top:8px;color:var(--accent-purple)">links:</div>
+          <div style="color:var(--text-dim)">both parties can read</div>
+          <div style="color:var(--text-dim)">therapist creates invite</div>
+          <div style="color:var(--text-dim)">patient accepts/declines</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Key Features -->
+  <div class="features">
+    <div class="section-title">// Key Unique Features</div>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon">🔗</div>
+        <div class="feat-title">Therapist–Patient Link</div>
+        <div class="feat-desc">Therapist generates an invite code. Patient enters it to consent and link accounts. Either party can unlink at any time.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🧠</div>
+        <div class="feat-title">Session Prep Brief</div>
+        <div class="feat-desc">Before each session, AI auto-generates a summary of the patient's week: mood trend, key topics, flagged moments.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🚨</div>
+        <div class="feat-title">Crisis Detection</div>
+        <div class="feat-desc">If AI detects distress signals (self-harm language, extreme stress), therapist gets an immediate push notification.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <div class="feat-title">Mood Timeline</div>
+        <div class="feat-desc">Visual chart of emotional state across days and weeks. Both patient and therapist can view the same timeline.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔒</div>
+        <div class="feat-title">Privacy Controls</div>
+        <div class="feat-desc">Patient can mark entries as private — visible to themselves only, excluded from therapist view and AI reports.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📝</div>
+        <div class="feat-title">Offline Journaling</div>
+        <div class="feat-desc">Entries saved locally when offline. Synced and analyzed when connection returns. No journal entry is ever lost.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
